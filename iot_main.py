@@ -1,9 +1,3 @@
-## IoT Workshops
-from twython import Twython, TwythonError		# Twython is used for getting and recieving twitter data
-from TwitterIdentity import twitter				# Personal data hidden by a separate file
-from HIH6130.io import HIH6130					# Sparkfun temperature and humidity sensor
-from bmp180 import *							# BMP180 Barometer sensor
-
 ## IoT Assignment
 from mcp3008 import *							# using spidev to read the MPC3008 ADC 
 from time import sleep							# for pausing execution
@@ -14,7 +8,7 @@ import RPi.GPIO as GPIO							# GPIO library Used fo LED outputs
 import hashlib									# For hashing the time
 import time 									# for something to hash
 
-ON, OFF = range(2)
+OFF, ON = range(2)								# Equivalent to enum types in C, ON
 
 
 def CreateHashCode():
@@ -63,28 +57,6 @@ def TestGPIO():
 	
 	GPIO.output(06,GPIO.LOW)
 	GPIO.output(05,GPIO.LOW)
-
-
-#temperature/humidity sensor
-def readhih6130():
-	rht = HIH6130()
-	rht.read()
-	if debug == 1:
-		print("Timestamp   : {0}".format(hash.hexdigest()[:20]))	# time
-		print("Humidity    : {0}".format(rht.rh)) 			# humidity in %
-		print("Temperature : {0}".format(rht.t))			# temp in C
-		print
-
-		
-#read BMP180 sensor
-def read180():
-	(chip_id, chip_version) = readBmp180Id()
-	(temperature,pressure) = readBmp180()
-	if debug == 1:
-		print("Temperature : {0}".format(temperature))		# temp in C
-		print("Pressure    : {0}".format(pressure)) 		# pressure in mbar
-		print 
-
 		
 def readAnalog():
 	for x in range(0,8):
@@ -95,7 +67,8 @@ def ReadSoilHumidity(channel):
 	humid = round(getReading(channel), 2)
 	return humid
   
-
+def UpdateDatabase(PostSensor, PostType, PostVal):
+	RespPost = requests.post(MainURL + PostURL, params=AddData(PostSensor, PostType, PostVal))
 	
 
 # Program Start
@@ -111,8 +84,6 @@ Temperatur1 = 0
 
 for x in range(0,5):
 	print
-	print(ON)
-	print(OFF)
 	readAnalog()
 	print ReadSoilHumidity(2)/1000*100
 	#print("Soil Dryness at {0}%".format(ReadSoilHumidity(SoilSensor1)))
