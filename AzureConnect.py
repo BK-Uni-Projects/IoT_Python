@@ -18,7 +18,7 @@ PostURL='/sensors/postsensordata'
 GetURL='/sensors/getsensordata'
 
 def UploadData(sensorid, sensortype, sensorvalue):
-	RespPost - requests.post(MainURL+PostURL, params=AddData(sensorid, sensortype, sensorvalue))
+	RespPost = requests.post(MainURL+PostURL, params=AddData(sensorid, sensortype, sensorvalue))
 	
 
 
