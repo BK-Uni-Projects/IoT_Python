@@ -8,14 +8,31 @@ import RPi.GPIO as GPIO							# GPIO library Used fo LED outputs
 import hashlib									# For hashing the time
 import time 									# for something to hash
 
-OFF, ON = range(2)								# Equivalent to enum types in C, ON
 
+# Setup data types for program
+OFF, ON = range(2)								# Logical Enums for LEDs etc
 
-def CreateHashCode():
+# LED GPIO Pins
+Temp_HIGH = 21		# red
+Temp_MED = 20		# yellow
+Temp_LOW = 16		# green
+
+Soil_01_LOW = 26	# red
+Soil_01_OK = 19		# green
+
+Soil_02_LOW = 06	# red
+Soil_02_OK = 05		# green
+
+#	Setup Sensor IDs (3008 input channels)
+Temperature_1 	= 0
+Temperature_2 	= 1
+SoilSensor_1 	= 2
+
+def CreateHashCode(size):
+	#hashcode = hash.hexdigest()[:20]
 	hash = hashlib.sha1()
 	hash.update(str(time.time()))
-	return hash
-
+	return hash.hexdigest()[:size]
 
 def InitialiseGPIO():
 	GPIO.setmode(GPIO.BCM)						# Set GPIO to use BCM Pinout mode
@@ -31,76 +48,144 @@ def InitialiseGPIO():
 	GPIO.setup(06,GPIO.OUT)
 	GPIO.setup(05,GPIO.OUT)
 
+def CleanupGPIO():
+	## Switch OFF all LEDs
+	GPIO.output(Temp_HIGH, GPIO.LOW)
+	GPIO.output(Temp_MED, GPIO.LOW)
+	GPIO.output(Temp_LOW, GPIO.LOW)
+	
+	GPIO.output(Soil_01_LOW, GPIO.LOW)
+	GPIO.output(Soil_01_OK, GPIO.LOW)
+	
+	GPIO.output(Soil_02_LOW, GPIO.LOW)
+	GPIO.output(Soil_02_OK, GPIO.LOW)
 	
 def TestGPIO():
 	## Switch on All LEDs
-	GPIO.output(21,GPIO.HIGH)
-	GPIO.output(20,GPIO.HIGH)
-	GPIO.output(16,GPIO.HIGH)
+	GPIO.output(Temp_HIGH, GPIO.HIGH)
+	GPIO.output(Temp_MED, GPIO.HIGH)
+	GPIO.output(Temp_LOW, GPIO.HIGH)
 	
-	GPIO.output(26,GPIO.HIGH)
-	GPIO.output(19,GPIO.HIGH)
+	GPIO.output(Soil_01_LOW, GPIO.HIGH)
+	GPIO.output(Soil_01_OK, GPIO.HIGH)
 	
-	GPIO.output(06,GPIO.HIGH)
-	GPIO.output(05,GPIO.HIGH)
+	GPIO.output(Soil_02_LOW, GPIO.HIGH)
+	GPIO.output(Soil_02_OK, GPIO.HIGH)
 	
 	## Wait 5 seconds
 	time.sleep(5)
 
 	## Switch OFF all LEDs
-	GPIO.output(21,GPIO.LOW)
-	GPIO.output(20,GPIO.LOW)
-	GPIO.output(16,GPIO.LOW)
+	GPIO.output(Temp_HIGH, GPIO.LOW)
+	GPIO.output(Temp_MED, GPIO.LOW)
+	GPIO.output(Temp_LOW, GPIO.LOW)
 	
-	GPIO.output(26,GPIO.LOW)
-	GPIO.output(19,GPIO.LOW)
+	GPIO.output(Soil_01_LOW, GPIO.LOW)
+	GPIO.output(Soil_01_OK, GPIO.LOW)
 	
-	GPIO.output(06,GPIO.LOW)
-	GPIO.output(05,GPIO.LOW)
+	GPIO.output(Soil_02_LOW, GPIO.LOW)
+	GPIO.output(Soil_02_OK, GPIO.LOW)
 		
-def readAnalog():
-	for x in range(0,8):
-		print ("Channel {0}: {1}".format(x, getReading(x)))
-
+def readAnalog(channel):
+	print ("Channel {0}: {1}".format(channel, getReading(channel)))
+	print ("Channel {0}: {1}".format(channel, ReadChannel(channel)))
+	print
 		
-def ReadSoilHumidity(channel): 	
+def ReadSoil(channel): 	
 	humid = round(getReading(channel), 2)
+	humid = humid / 1000 * 100
 	return humid
   
 def UpdateDatabase(PostSensor, PostType, PostVal):
 	RespPost = requests.post(MainURL + PostURL, params=AddData(PostSensor, PostType, PostVal))
 	
-
+def sensortest():
+	for x in range(0,5):
+		print
+		for x in range(0,3):
+			readAnalog(x)
+			
+		print ReadSoil(SoilSensor_1)
+		print ConvertTemp(getReading(Temperature_1), 2)
+		
+		print("Soil Dryness at {0}%".format(ReadSoil(SoilSensor_1)))
+		print("Temperature 1 at {0}C".format(ConvertTemp(getReading(Temperature_1), 2)))
+		
+		sleep(2)
+		
+def sampleTemp(sensor):
+	temp = ConvertTemp(getReading(Temperature_1), 2)
+	flag = 0
+	if temp > 40:
+		flag=1
+		GPIO.output(Temp_HIGH, GPIO.HIGH)
+		GPIO.output(Temp_MED, GPIO.LOW)
+		GPIO.output(Temp_LOW, GPIO.LOW)	
+	
+	if temp < 20:
+		flag=1
+		GPIO.output(Temp_HIGH, GPIO.LOW)
+		GPIO.output(Temp_MED, GPIO.LOW)
+		GPIO.output(Temp_LOW, GPIO.HIGH)
+		
+	if flag == 0:
+		flag=1	
+		GPIO.output(Temp_HIGH, GPIO.LOW)
+		GPIO.output(Temp_MED, GPIO.LOW)
+		GPIO.output(Temp_LOW, GPIO.HIGH)
+		
+	if debug == 1:
+		print ConvertTemp(getReading(Temperature_1), 2)		
+		
+	## TODO	
+	# Send data to server
+	PostSensor = 0				# Default value to stop errors
+	if sensor == 0:
+		PostSensor = 5
+		
+	if sensor == 1:
+		PostSensor = 6
+	
+	PostType = 'Temperature'
+	PostVal = temp
+	
+	#print("post = {0}{1}".format(MainURL + PostURL, AddData(PostSensor, PostType, PostVal)))
+	#, params=AddData(PostSensor, PostType, PostVal)))
+	
+	RespPost = requests.post(MainURL + PostURL, params=AddData(PostSensor, PostType, PostVal))
+	print("RespPost = {0}".format(RespPost))
+	
+	
 # Program Start
-debug = 0
+debug = 1
 
 InitialiseGPIO()
-if debug == 1:
-	TestGPIO()
 
-# Setup Sensor IDs (3008 input channels)
-SoilSensor1 = 2
-Temperatur1 = 0
+for x in range(0, 10):
+	sampleTemp(Temperature_1)
+	sleep(1)
 
-for x in range(0,5):
-	print
-	readAnalog()
-	print ReadSoilHumidity(2)/1000*100
-	#print("Soil Dryness at {0}%".format(ReadSoilHumidity(SoilSensor1)))
-	sleep(2)
+returnedData = getSensorData(5)
+print json.dumps(returnedData.json())
 
-#hashcode = hash.hexdigest()[:20]
 
-#print hashcode
+## Program Complete	tidy up
+CleanupGPIO()
 
-#print
 
-#PostSensor = 3
-#PostType = 'humidity'
-#PostVal = 30	#rht.rh
 
-#RespPost = requests.post(MainURL + PostURL, params=AddData(PostSensor, PostType, PostVal))
 
-#RespGet = requests.get(MainURL+GetURL, params=mysensor(PostSensor))
 
-#print json.dumps(RespGet.json())
+
+
+
+
+
+
+
+
+
+
+
+
+
