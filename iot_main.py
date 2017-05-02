@@ -141,10 +141,10 @@ def sampleTemp(sensor):
 	# Send data to server
 	PostSensor = 0				# Default value to stop errors
 	if sensor == 0:
-		PostSensor = 5
+		PostSensor = 6
 		
 	if sensor == 1:
-		PostSensor = 6
+		PostSensor = 7
 	
 	PostType = 'Temperature'
 	PostVal = temp
@@ -152,8 +152,8 @@ def sampleTemp(sensor):
 	#print("post = {0}{1}".format(MainURL + PostURL, AddData(PostSensor, PostType, PostVal)))
 	#, params=AddData(PostSensor, PostType, PostVal)))
 	
-	RespPost = requests.post(MainURL + PostURL, params=AddData(PostSensor, PostType, PostVal))
-	print("RespPost = {0}".format(RespPost))
+	UpdateDatabase(PostSensor, PostType, PostVal)
+	#print("RespPost = {0}".format(RespPost))
 	
 	
 # Program Start
@@ -161,11 +161,11 @@ debug = 1
 
 InitialiseGPIO()
 
-for x in range(0, 10):
+for x in range(0, 60):
 	sampleTemp(Temperature_1)
 	sleep(1)
 
-returnedData = getSensorData(5)
+returnedData = getSensorData(6)
 print json.dumps(returnedData.json())
 
 
